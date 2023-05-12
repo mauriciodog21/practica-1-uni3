@@ -1,0 +1,228 @@
+import bdb
+from tkinter import *
+from tkinter import messagebox
+from tkinter import ttk
+import tkinter
+import mysql.connector
+
+
+# Conectar a la base de datos con xamp
+try:
+    db = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="e_scuels"
+    )
+except mysql.connector.Error as e:
+    messagebox.showerror("Error de conexión", f"No se pudo conectar a la base de datos: {e}")
+    exit()
+
+
+# Crear la tabla de alumnos si no existe
+cursor = db.cursor()
+cursor.execute("CREATE TABLE IF NOT EXISTS alumnos (id INT AUTO_INCREMENT PRIMARY KEY, nombre VARCHAR(255), edad INT, email VARCHAR(255))")
+
+# Función para leer todos los alumnos de la base de datos
+def leer_alumnosDB():
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM alumnos")
+    return cursor.fetchall()
+
+# Función para agregar un nuevo alumno a la base de datos
+def agregar_alumnoDB(nombre, edad, email):
+    try:
+        
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO alumnos (nombre, edad, email) VALUES (%s, %s, %s)", (nombre, edad, email))
+        db.commit()
+    except mysql.connector.Error as error:
+        messagebox.showerror("Error al agregar el alumno", f"No se pudo agregar el alumno: {error}")
+    finally:
+        cursor.close()
+        
+def Registro_de_alumnos_():
+    global entrada_edad
+    global entrada_email
+    global entrada_id
+    global entrada_nombre
+    global tabla_alumnos
+    
+    # Crear la ventana principal
+    ventana = Tk()
+    ventana.title("Ejemplo CRUD con Python y MySQL")
+
+    # Crear los campos de entrada para los datos del alumno
+    Label(ventana, text="Id:").grid(row=0, column=0, padx=5, pady=5)
+    entrada_id = Entry(ventana)
+    entrada_id.grid(row=0, column=1, padx=5, pady=5)
+
+    Label(ventana, text="Nombre:").grid(row=1, column=0, padx=5, pady=5)
+    entrada_nombre = Entry(ventana)
+    entrada_nombre.grid(row=1, column=1, padx=5, pady=5)
+
+    Label(ventana, text="Edad:").grid(row=2, column=0, padx=5, pady=5)
+    entrada_edad = Entry(ventana)
+    entrada_edad.grid(row=2, column=1, padx=5, pady=5)
+
+    Label(ventana, text="Email:").grid(row=3, column=0, padx=5, pady=5)
+    entrada_email = Entry(ventana)
+    entrada_email.grid(row=3, column=1, padx=5, pady=5)
+
+    # Crear los botones para agregar, actualizar y eliminar alumnos
+    Button(ventana, text="Agregar alumno", command=agregar_alumno).grid(row=0, column=2, padx=5, pady=5)
+    Button(ventana, text="Actualizar alumno", command=actualizar_alumno).grid(row=1, column=2, padx=5, pady=5)
+    Button(ventana, text="Eliminar alumno", command=eliminar_alumno).grid(row=2, column=2, padx=5, pady=5)
+
+       
+def iniciar():
+    usuario=nombre_usuario.get()
+    contraseña=contraseña_usuario.get()
+    if usuario=="mauridog" and contraseña == "mau":
+        cursor = db.cursor()
+        cursor.execute("SELECT * from alumnos")
+        resultado = cursor.fetchall()
+        
+        # crear ventana de Tkinter
+        ventana_2 = tkinter.Tk()
+        ventana_2.config(bg="green")
+        ventana_2.title("Lista de caso")
+
+       # crear Table
+        tabla = ttk.Treeview(ventana_2)
+        tabla['columns'] = ('id', 'nombre','edad','email')
+
+        # ajustar las columnas
+        tabla.column('#0', width=0, stretch=tkinter.NO)
+        tabla.column('id', anchor=tkinter.CENTER, width=200)
+        tabla.column('nombre', anchor=tkinter.CENTER, width=150)
+        tabla.column('edad', anchor=tkinter.CENTER, width=150)
+        tabla.column('email', anchor=tkinter.CENTER, width=150)
+
+
+        # heading
+        tabla.heading('#0', text='', anchor=tkinter.CENTER)
+        tabla.heading('id', text='id', anchor=tkinter.CENTER)
+        tabla.heading('nombre', text='nombre', anchor=tkinter.CENTER)
+        tabla.heading('edad', text='edad', anchor=tkinter.CENTER)
+        tabla.heading('email', text='email', anchor=tkinter.CENTER)
+
+        # agregar datos
+        for caso in resultado:
+            tabla.insert(parent='', index='end', id=caso[0], values=(caso[0],caso[1], caso[2],caso[3]))
+
+        # mostrar tabla en ventana
+        tabla.pack()
+
+        ventana_2.mainloop()
+        
+
+ 
+ 
+# Función para actualizar un alumno existente en la base de datos
+def actualizar_alumnoDB(id, nombre, edad, email):
+    iid = int(id)
+    cursor = db.cursor()
+    print("UPDATE alumnos SET nombre = %s, edad = %s, email = %s WHERE id = %s", (nombre, edad, email, iid))
+    cursor.execute("UPDATE alumnos SET nombre = %s, edad = %s, email = %s WHERE id = %s", (nombre, edad, email, iid))
+    db.commit()
+
+# Función para eliminar un alumno existente de la base de datos
+def eliminar_alumnoDB(id):
+    cursor = db.cursor()
+    cursor.execute("DELETE FROM alumnos WHERE id = %s", (id,))
+    db.commit()
+
+
+# Función para agregar un nuevo alumno
+def agregar_alumno():
+    # Obtener los datos del nuevo alumno
+    nombre = entrada_nombre.get()
+    edad = entrada_edad.get()
+    email = entrada_email.get()
+
+    # Validar que los campos no estén vacíos
+    if not nombre or not edad or not email:
+        messagebox.showerror("Error al agregar el alumno", "Por favor ingrese todos los datos del alumno")
+        return
+
+    # Agregar el nuevo alumno
+    agregar_alumnoDB(nombre, edad, email)
+
+    # Limpiar los campos de entrada
+    entrada_nombre.delete(0, END)
+    entrada_edad.delete(0, END)
+    entrada_email.delete(0, END)
+
+    # Mostrar la lista actualizada de alumnos
+
+
+# Función para actualizar un alumno existente
+def actualizar_alumno():
+    # Obtener los datos del alumno a actualizar
+    nombre = entrada_nombre.get()
+    edad = entrada_edad.get()
+    email = entrada_email.get()
+    id = entrada_id.get()
+
+    # Validar que los campos no estén vacíos
+    if not id or not nombre or not edad or not email:
+        messagebox.showerror("Error al actualizar el alumno", "Por favor ingrese todos los datos del alumno")
+        return
+
+    # Actualizar el alumno
+    actualizar_alumnoDB(id, nombre, edad, email)
+
+    # Limpiar los campos de entrada
+    entrada_id.delete(0, END)
+    entrada_nombre.delete(0, END)
+    entrada_edad.delete(0, END)
+    entrada_email.delete(0, END)
+
+    # Mostrar la lista actualizada de alumnos
+
+
+# Función para eliminar un alumno existente
+def eliminar_alumno():
+    # Obtener el ID del alumno a eliminar
+    id = entrada_id.get()
+
+    # Validar que se haya ingresado un ID
+    if not id:
+        messagebox.showerror("Error al eliminar el alumno", "Por favor ingrese el ID del alumno a eliminar")
+        return
+
+    # Preguntar al usuario si está seguro de eliminar el alumno
+    confirmar = messagebox.askyesno("Confirmar eliminación", "¿Está seguro de eliminar este alumno?")
+
+    if confirmar:
+        # Eliminar el alumno
+        eliminar_alumnoDB(id)
+
+        # Limpiar los campos de entrada
+        entrada_id.delete(0, END)
+        entrada_nombre.delete(0, END)
+        entrada_edad.delete(0, END)
+        entrada_email.delete(0, END)
+
+
+
+ventana_3 = tkinter.Tk()
+ventana_3.config(bg="red")
+ventana_3.title("registro") 
+ventana_3.configure (padx=40) 
+
+nombre_usuario = tkinter.Entry(ventana_3)
+nombre_usuario.pack(pady=20)
+contraseña_usuario=tkinter.Entry(ventana_3,show="*")
+contraseña_usuario.pack()
+
+agregar_alumno2 = tkinter.Button(ventana_3, text="registrar", command=Registro_de_alumnos_)
+agregar_alumno2.pack(padx=40, pady=20)
+salir = tkinter.Button(ventana_3, text="iniciar", command=iniciar)
+salir.pack()
+
+resultado = tkinter.Label(ventana_3, text="",bg="red")
+resultado.pack(pady=20)
+
+ventana_3.mainloop()
